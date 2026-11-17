@@ -1,37 +1,38 @@
-# CCU Pilot V0
+# CCU-Pilot V1
 
-PWA locale en français pour générer des chaînes CCU Star Citizen à partir de l’inventaire de l’utilisateur.
+PWA statique pour piloter une flotte et des chaînes CCU, avec :
 
-## Fonctions livrées
+- accès réservé à une adresse Google ;
+- synchronisation Firestore isolée par UID et règles de sécurité ;
+- copie locale et mode hors ligne ;
+- actualisation automatique des prix et disponibilités indicatives ;
+- flotte affichée directement sous le tableau de bord ;
+- inventaire de tokens et CCU ;
+- réservation exclusive des éléments par chaîne ;
+- séparation argent frais / Store Credit / historique ;
+- TVA calculée à partir du TTC ;
+- alerte de chaîne non meltable pour Gifts CIG et Referral Rewards ;
+- import/export JSON.
 
-- génération dynamique, sans chaînes pré-enregistrées ;
-- picking automatique dans les CCU libres ;
-- verrouillage exclusif des CCU et du token à l’enregistrement ;
-- suppression d’une chaîne avec libération des éléments ;
-- séparation Store Credit / argent frais / coût historique ;
-- montants TTC en dollars et ventilation HT/TVA ;
-- valeurs actuelle et estimée ;
-- propagation non meltable des Gifts CIG et Referral Rewards ;
-- suivi manuel des Warbonds passés et CCU spéculatifs ;
-- import direct de `Optimisation_chaines_CCU.xlsx` sans dépendance externe ;
-- sauvegarde locale, import/export JSON ;
-- PWA hors ligne ;
-- synchronisation optionnelle Firestore avec connexion Google uniquement.
+## Démarrage
 
-## Démarrer
+1. Lire `GUIDE.md`.
+2. Configurer `firebase-config.js`.
+3. Publier `firestore.rules` dans Firebase Console.
+4. Envoyer les fichiers dans le sous-dossier GitHub Pages choisi.
 
-- Ouverture directe : `index.html`.
-- Serveur local : `start-pc.bat` puis <http://localhost:8080>.
-- Tests : `node tests/core.test.js` et `node tests/xlsx-lite.test.js`.
+## Tests
 
-Lire `GUIDE.md` pour l’installation PC/Android et Firebase.
+Avec Node.js 20 ou plus récent :
 
-## Structure
+```bash
+npm test
+```
 
-- `core.js` : moteur de génération et règles métier.
-- `app.js` : interface, stockage, imports/exports et synchronisation.
-- `xlsx-lite.js` : lecteur XLSX minimal pour Chrome moderne.
-- `seed.js` / `initial-data.json` : inventaire initial issu de l’Excel.
-- `firebase-config.js` : configuration à compléter.
-- `firestore.rules` : cloisonnement par utilisateur Google.
-- `service-worker.js` / `manifest.webmanifest` : installation PWA et mode hors ligne.
+## Source des données publiques
+
+CCU-Pilot utilise l’API communautaire Star Citizen Wiki pour les informations publiques de catalogue. La disponibilité est indicative. Toujours vérifier le Pledge Store RSI avant une décision d’achat.
+
+## Licence et indépendance
+
+Cette version est une implémentation indépendante. Elle ne contient pas de code Citizens’ Hub et n’appelle pas son backend privé. Citizens’ Hub est distribué sous Elastic License 2.0 ; ses restrictions de service hébergé ne sont donc pas importées dans CCU-Pilot.
