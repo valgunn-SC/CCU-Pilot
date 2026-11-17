@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08111f">
+  <meta name="description" content="Pilotage privé de flotte et de chaînes CCU Star Citizen.">
+  <title>CCU-Pilot</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <section id="setup-screen" class="gate hidden" aria-labelledby="setup-title">
+    <div class="gate-card">
+      <div class="brand brand-large"><span class="brand-mark">C</span><span>CCU-Pilot</span></div>
+      <span class="eyebrow">Configuration requise</span>
+      <h1 id="setup-title">Connexion privée non configurée</h1>
+      <p>Renseigne <code>firebase-config.js</code>, active Google dans Firebase Authentication et publie les règles Firestore fournies. L’application ne charge aucune donnée tant que cette protection n’est pas prête.</p>
+      <a class="button primary" href="./GUIDE.md">Ouvrir le guide de mise en place</a>
+      <p class="fine-print">Le fichier de configuration Firebase Web peut être public. La confidentialité repose sur l’adresse propriétaire et les règles Firestore.</p>
+    </div>
+  </section>
+
+  <section id="login-screen" class="gate hidden" aria-labelledby="login-title">
+    <div class="gate-card">
+      <div class="brand brand-large"><span class="brand-mark">C</span><span>CCU-Pilot</span></div>
+      <span class="eyebrow">Espace privé</span>
+      <h1 id="login-title">Ta flotte, uniquement.</h1>
+      <p>Connecte-toi avec le compte Google déclaré comme propriétaire. Les données synchronisées sont isolées par les règles Firestore.</p>
+      <button id="login-btn" class="button primary google-button" type="button">
+        <span class="google-g">G</span> Se connecter avec Google
+      </button>
+      <p id="login-error" class="error-text" role="alert"></p>
+    </div>
+  </section>
+
+  <div id="app-shell" class="app-shell hidden">
+    <header class="topbar">
+      <a class="brand" href="#dashboard" aria-label="CCU-Pilot - Tableau de bord"><span class="brand-mark">C</span><span>CCU-Pilot</span><small>V1</small></a>
+      <nav class="desktop-nav" aria-label="Navigation principale">
+        <button class="nav-button active" data-view="dashboard">Tableau de bord</button>
+        <button class="nav-button" data-view="inventory">Inventaire</button>
+        <button class="nav-button" data-view="chains">Chaînes</button>
+        <button class="nav-button" data-view="settings">Réglages</button>
+      </nav>
+      <div class="account">
+        <span id="sync-indicator" class="sync-indicator"><i></i><span>Local</span></span>
+        <button id="account-button" class="account-button" type="button" aria-label="Compte"><img id="account-avatar" alt=""><span id="account-name"></span></button>
+        <button id="logout-btn" class="icon-button" type="button" title="Déconnexion" aria-label="Déconnexion">↪</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="view-dashboard" class="view active">
+        <div class="hero panel">
+          <div>
+            <span class="eyebrow">Centre de commandement</span>
+            <h1>Tableau de bord</h1>
+            <p id="welcome-text">Vue consolidée de ta flotte, de tes CCU et de tes investissements.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="button secondary" data-view-target="inventory">+ Ajouter</button>
+            <button id="refresh-catalog-btn" class="button primary">↻ Actualiser prix & disponibilité</button>
+          </div>
+        </div>
+
+        <div id="catalog-banner" class="source-banner">
+          <div><strong id="catalog-status-title">Catalogue non actualisé</strong><span id="catalog-status-text">Les prix seront récupérés pour les vaisseaux présents dans ton inventaire.</span></div>
+          <span class="source-pill">Source : Star Citizen Wiki API</span>
+        </div>
+
+        <div class="metrics-grid" aria-label="Indicateurs clés">
+          <article class="metric"><span>Valeur actuelle flotte</span><strong id="metric-fleet-value">0 $</strong><small id="metric-fleet-count">0 vaisseau</small></article>
+          <article class="metric"><span>Argent frais investi</span><strong id="metric-cash">0 $</strong><small>TTC déclaré</small></article>
+          <article class="metric"><span>Store Credit investi</span><strong id="metric-credit">0 $</strong><small id="metric-wallet">0 $ disponible</small></article>
+          <article class="metric"><span>Économie des chaînes</span><strong id="metric-saving">0 $</strong><small id="metric-chains-count">0 chaîne</small></article>
+        </div>
+
+        <section class="panel fleet-panel" aria-labelledby="fleet-title">
+          <div class="section-head">
+            <div><span class="eyebrow">Sous le tableau de bord</span><h2 id="fleet-title">Ma flotte</h2></div>
+            <div class="filters"><input id="fleet-search" type="search" placeholder="Rechercher un vaisseau…"><select id="fleet-filter"><option value="all">Tous</option><option value="available">Disponibles</option><option value="unavailable">Indisponibles</option><option value="reserved">Réservés</option></select></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Vaisseau / token</th><th>Coût payé</th><th>Valeur actuelle</th><th>Disponibilité</th><th>Financement</th><th>Statut</th></tr></thead>
+              <tbody id="fleet-dashboard-body"></tbody>
+            </table>
+          </div>
+          <div id="fleet-empty" class="empty-state hidden"><span>◇</span><h3>Aucun vaisseau</h3><p>Ajoute un token ou importe la sauvegarde de la V0.</p><button class="button secondary" data-view-target="inventory">Ouvrir l’inventaire</button></div>
+        </section>
+      </section>
+
+      <section id="view-inventory" class="view">
+        <div class="page-head"><div><span class="eyebrow">Données personnelles</span><h1>Inventaire</h1><p>Tokens et CCU restent réservables une seule fois.</p></div></div>
+        <div class="two-columns">
+          <section class="panel">
+            <div class="section-head"><div><h2>Ajouter un vaisseau / token</h2><p>Le prix actuel sera recherché automatiquement.</p></div></div>
+            <form id="fleet-form" class="form-grid">
+              <label class="wide">Nom du vaisseau<input name="shipName" required placeholder="Ex. Prospector" autocomplete="off"></label>
+              <label>Coût payé TTC ($)<input name="paidAmount" type="number" min="0" step="0.01" value="0"></label>
+              <label>Financement<select name="fundingType"><option value="historical">Historique non ventilé</option><option value="cash">Argent frais</option><option value="credit">Store Credit</option></select></label>
+              <label>Type de token<select name="tokenType"><option value="standard">Standard</option><option value="giveaway">Gift CIG / Giveaway</option><option value="referral">Referral Reward</option></select></label>
+              <label>Assurance<input name="insurance" placeholder="LTI, 120 mois…"></label>
+              <button class="button primary wide" type="submit">Ajouter à la flotte</button>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="section-head"><div><h2>Ajouter un CCU</h2><p>Les valeurs de départ et d’arrivée viennent du catalogue.</p></div></div>
+            <form id="ccu-form" class="form-grid">
+              <label>Depuis<input name="fromShip" required placeholder="Ex. Cutlass Black" autocomplete="off"></label>
+              <label>Vers<input name="toShip" required placeholder="Ex. Prospector" autocomplete="off"></label>
+              <label>Coût payé TTC ($)<input name="paidAmount" type="number" min="0" step="0.01" value="0"></label>
+              <label>Financement<select name="fundingType"><option value="historical">Historique non ventilé</option><option value="cash">Argent frais</option><option value="credit">Store Credit</option></select></label>
+              <label class="check"><input name="warbond" type="checkbox"> Warbond</label>
+              <label class="check"><input name="speculative" type="checkbox"> Spéculatif</label>
+              <button class="button primary wide" type="submit">Ajouter le CCU</button>
+            </form>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="section-head"><div><h2>Vaisseaux et tokens</h2><p id="fleet-list-count"></p></div></div>
+          <div id="fleet-cards" class="cards-list"></div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><div><h2>CCU disponibles</h2><p id="ccu-list-count"></p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Upgrade</th><th>Payé</th><th>Écart catalogue</th><th>Type</th><th>État</th><th></th></tr></thead><tbody id="ccu-table-body"></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="view-chains" class="view">
+        <div class="page-head"><div><span class="eyebrow">Planificateur</span><h1>Chaînes CCU</h1><p>Le générateur pioche uniquement dans tes CCU libres. Une réservation ne peut pas être réutilisée.</p></div></div>
+        <section class="panel chain-builder">
+          <form id="chain-form" class="builder-grid">
+            <label>Nom de la chaîne<input name="chainName" required placeholder="Ex. Chaîne Galaxy"></label>
+            <label>Token de départ<select id="chain-token" name="tokenId" required></select></label>
+            <label>Vaisseau cible<input id="chain-target" name="targetShip" required placeholder="Ex. Galaxy" list="catalog-names" autocomplete="off"></label>
+            <button class="button primary" type="submit">Générer et réserver</button>
+          </form>
+          <datalist id="catalog-names"></datalist>
+          <p class="fine-print">Si aucun chemin complet n’existe, la meilleure progression trouvée est enregistrée avec le trou restant.</p>
+        </section>
+        <div id="chains-list" class="chain-list"></div>
+        <div id="chains-empty" class="empty-state panel hidden"><span>⛓</span><h3>Aucune chaîne enregistrée</h3><p>Choisis un token et une cible pour générer une chaîne à partir de tes CCU libres.</p></div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="page-head"><div><span class="eyebrow">Configuration</span><h1>Réglages & sauvegardes</h1><p>Contrôle de la synchronisation, des calculs et des exports.</p></div></div>
+        <div class="settings-grid">
+          <section class="panel"><h2>Finances</h2><form id="settings-form" class="form-grid"><label>Store Credit disponible ($)<input name="storeCredit" type="number" min="0" step="0.01"></label><label>Taux de TVA (%)<input name="vatRate" type="number" min="0" max="100" step="0.1"></label><label>Actualisation automatique (heures)<input name="autoRefreshHours" type="number" min="1" max="168"></label><button class="button primary wide">Enregistrer</button></form></section>
+          <section class="panel"><h2>Compte & synchronisation</h2><dl class="details"><div><dt>Compte autorisé</dt><dd id="owner-email"></dd></div><div><dt>Dernière synchronisation</dt><dd id="last-sync">—</dd></div><div><dt>Document distant</dt><dd>Privé, lié à ton UID Google</dd></div></dl><button id="sync-now-btn" class="button secondary">Synchroniser maintenant</button></section>
+          <section class="panel"><h2>Import / export</h2><p>Exporte une copie complète avant toute évolution majeure.</p><div class="button-stack"><button id="export-btn" class="button secondary">Exporter la sauvegarde JSON</button><label class="button ghost file-button">Importer une sauvegarde<input id="import-input" type="file" accept="application/json,.json"></label></div><p class="fine-print">L’import accepte le schéma V1/V2 et plusieurs noms de champs hérités de la V0.</p></section>
+          <section class="panel danger-panel"><h2>Zone sensible</h2><p>Efface les données locales et synchronisées de ton compte. Cette action est irréversible après synchronisation.</p><button id="reset-btn" class="button danger">Réinitialiser toutes mes données</button></section>
+        </div>
+        <section class="panel source-details"><h2>Source du catalogue</h2><p>Prix catalogue, statut de production et disponibilité indicative sont récupérés depuis l’API communautaire Star Citizen Wiki, alimentée par les données RSI et communautaires. Ce n’est pas une API officielle de Cloud Imperium Games. Vérifie toujours le Pledge Store avant un achat.</p><p><strong>Dernière tentative :</strong> <span id="catalog-last-attempt">Jamais</span></p></section>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="Navigation mobile">
+      <button class="active" data-view="dashboard"><span>⌂</span>Accueil</button><button data-view="inventory"><span>▣</span>Inventaire</button><button data-view="chains"><span>⛓</span>Chaînes</button><button data-view="settings"><span>⚙</span>Réglages</button>
+    </nav>
+  </div>
+
+  <dialog id="confirm-dialog"><form method="dialog"><h2 id="dialog-title">Confirmer</h2><p id="dialog-message"></p><div class="dialog-actions"><button value="cancel" class="button ghost">Annuler</button><button id="dialog-confirm" value="confirm" class="button danger">Confirmer</button></div></form></dialog>
+
+  <script src="./firebase-config.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
