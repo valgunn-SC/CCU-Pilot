@@ -1,5 +1,0 @@
-CCU Pilot V0
-Version : 0.1.0
-Build : 2026-11-17
-Source métier : Optimisation_chaines_CCU.xlsx
-Inventaire initial : 12 tokens, 15 CCU, 0 chaîne pré-enregistrée
