@@ -1,0 +1,10 @@
+{
+  "name": "ccu-pilot-v0",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Générateur local de chaînes CCU Star Citizen",
+  "scripts": {
+    "test": "node tests/core.test.js && node tests/xlsx-lite.test.js",
+    "start": "python3 -m http.server 8080"
+  }
+}
